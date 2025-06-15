@@ -31,6 +31,7 @@ function Rules() {
       </button>
 
       <div className="rules-container" ref={rulesRef}>
+    
         <div className="rules-content">
           <h1>Правила игры "Бункер"</h1>
           
@@ -180,10 +181,11 @@ function Rules() {
     <h2>Важно!</h2>
     <p>Данный свод правил относится к основному (базовому) паку. Правила расширенных паков могут отличаться.</p>
   </section>
-          
+           
         </div>
       </div>
-
+      
+    <div>
       <div className="scroll-buttons">
         <button onClick={scrollUp} aria-label="Прокрутить вверх">↑</button>
         <button onClick={scrollDown} aria-label="Прокрутить вниз">↓</button>
@@ -192,7 +194,9 @@ function Rules() {
       <footer>
         <p>Разработали тотото, 2025</p>
       </footer>
-    </div>
+      </div>
+      </div>
+    
   );
 }
 

@@ -67,7 +67,7 @@ button:hover {
 
 /* === Поля ввода === */
 .input-section {
-  margin-top: 25px;
+  margin-top: 35px;
   text-align: left;
   max-width: 400px;
   margin-left: auto;
@@ -76,20 +76,20 @@ button:hover {
 
 .input-section label {
   display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
+  margin-bottom: 10px;
+  font-weight: 1000;
   color: #eee;
 }
 
 .input-section input[type="text"] {
   width: 100%;
-  padding: 10px 14px;
-  margin-bottom: 20px;
+  padding: 15px 20px;
+  margin-bottom: 30px;
   border-radius: 8px;
   border: 1px solid #aaa;
   background: rgba(255,255,255,0.85);
   color: #222;
-  font-size: 16px;
+  font-size: 20px;
   box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
 }
 
@@ -205,7 +205,7 @@ input[type="text"]:focus {
   border: 2px solid #999;
   border-radius: 12px;
   padding: 30px 40px;
-  width: 80%;
+  width: 70%;
   max-width: 1200px;
   height: 70vh;
   margin: 70px auto 20px; /* Увеличен верхний отступ */
@@ -261,34 +261,36 @@ footer {
 /* Scroll Buttons */
 .scroll-buttons {
   position: fixed;
-  right: 8%; /* Точное позиционирование */
+  right: 20px; /* Фиксированный отступ 20px от правого края */
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 5px; /* Уменьшен промежуток */
-  z-index: 100;
+  gap: 10px; /* Увеличим расстояние между кнопками */
+  z-index: 100; /* Больше z-index для гарантии поверх всего */
 }
 
 .scroll-buttons button {
-  background-color: rgba(68, 68, 68, 0.9);
-  color: white;
-  border: none;
-  width: 30px; /* Уже */
-  height: 60px; /* Выше */
-  border-radius: 4px; /* Меньше скругление */
-  font-size: 18px;
+  background-color: rgba(40, 40, 40, 0.85);
+  color: #FFFFFF; /* Золотистый цвет для стрелок */
+  border: 1px solid #FFFFFF; /* Золотая граница */
+  width: 10px; /* Оптимальная ширина */
+  height: 40px;
+  border-radius: 6px; /* Чуть больше скругление */
+  font-size: 24px; /* Больше размер стрелок */
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Тень для объема */
 }
 
 .scroll-buttons button:hover {
-  background-color: rgba(102, 102, 102, 0.9);
-  transform: scale(1.05);
+  background-color: rgba(60, 60, 60, 0.9);
+  transform: scale(1.1); /* Сильнее увеличение при наведении */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Усиленная тень при наведении */
 }
 
 
@@ -357,14 +359,14 @@ footer {
 
 /* Кнопки */
 .start-button {
-  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  background: linear-gradient(135deg, #4fc3f7, #4fc3f7);
   font-size: 18px;
   padding: 15px 40px;
   margin-top: 20px;
 }
 
 .start-button:hover {
-  background: linear-gradient(135deg, #1b5e20, #2e7d32);
+  background: linear-gradient(135deg, #4fc3f7, #4fc3f7);
 }
 
 .start-button:disabled {
@@ -395,4 +397,213 @@ footer {
   padding: 15px;
   border-radius: 10px;
   margin-bottom: 30px;
+}
+
+
+/* Добавить в конец файла */
+
+.players-table {
+  width: 100%;
+  max-width: 600px;
+  margin: 20px auto;
+  border-collapse: collapse;
+  background: rgba(40, 40, 50, 0.7);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.players-table th {
+  background: rgba(60, 60, 80, 0.9);
+  padding: 15px;
+  text-align: left;
+  font-size: 18px;
+  border-bottom: 2px solid #777;
+}
+
+.players-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #555;
+  font-size: 16px;
+}
+
+.players-table tr:last-child td {
+  border-bottom: none;
+}
+
+.players-table tr:hover {
+  background: rgba(70, 70, 90, 0.8);
+}
+
+.players-table .current-player {
+  background: rgba(30, 80, 100, 0.7);
+  font-weight: bold;
+}
+
+.game-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px;
+  background: rgba(25, 25, 35, 0.85);
+  border-radius: 16px;
+  border: 1px solid #666;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.game-info {
+  background: rgba(40, 40, 50, 0.7);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  font-size: 18px;
+}
+
+.game-status {
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(50, 100, 50, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 20px;
+  border: 1px solid #6db4b9;
+}
+
+
+
+
+/* Добавим в конец файла */
+
+/* Стили для катастрофы и бункера */
+.disaster-section, .bunker-section {
+  background: rgba(40, 40, 60, 0.8);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  border: 1px solid #555;
+}
+
+.disaster-section h2, .bunker-section h2 {
+  margin-top: 0;
+  color: #ff6b6b;
+  border-bottom: 1px solid #ff6b6b;
+  padding-bottom: 10px;
+}
+
+.bunker-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.bunker-details p {
+  margin: 5px 0;
+}
+
+.bunker-details ul {
+  padding-left: 20px;
+  margin: 10px 0 0;
+}
+
+.bunker-details li {
+  margin-bottom: 5px;
+}
+
+/* Стили для таблицы характеристик */
+.traits-section {
+  margin-top: 30px;
+}
+
+.traits-table-container {
+  overflow-x: auto;
+}
+
+.traits-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(30, 30, 40, 0.9);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.traits-table th, .traits-table td {
+  padding: 12px 15px;
+  text-align: center;
+  border: 1px solid #444;
+}
+
+.traits-table th {
+  background: rgba(60, 60, 80, 0.95);
+  font-weight: bold;
+  color: #4fc3f7;
+  min-width: 120px;
+}
+
+.traits-table td:first-child {
+  text-align: left;
+  font-weight: bold;
+  background: rgba(50, 50, 70, 0.9);
+  color: #81c784;
+  white-space: nowrap;
+}
+
+.traits-table tr:nth-child(even) {
+  background: rgba(35, 35, 45, 0.7);
+}
+
+.traits-table tr:hover {
+  background: rgba(50, 50, 70, 0.8);
+}
+
+.current-player {
+  background: rgba(30, 80, 100, 0.7) !important;
+  color: #fff !important;
+  font-weight: bold !important;
+}
+
+.game-instructions {
+  margin-top: 25px;
+  padding: 15px;
+  background: rgba(50, 100, 50, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  border: 1px solid #6db4b9;
+}
+
+.highlight {
+  font-weight: bold;
+  color: #45424a;
+}
+.traits-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+.traits-table th, .traits-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.traits-table th {
+  background-color: #282c34;
+  color: white;
+}
+
+.traits-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.current-player {
+  background-color: #61dafb;
+  color: #282c34;
+  font-weight: bold;
+}
+
+.disaster-info, .bunker-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
 }
