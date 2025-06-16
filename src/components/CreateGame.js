@@ -22,6 +22,10 @@ function CreateGame() {
     
     return () => clearInterval(interval);
   }, [gameCode]);
+  
+  const handleBack = () => {
+    navigate(-1);
+  };
 
   const generateGameCode = () => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -91,6 +95,24 @@ function CreateGame() {
       position: 'relative',
       color: 'white'
     }}>
+      {/* Кнопка "Назад" */}
+      <button className="back-button" onClick={handleBack} aria-label="Назад"
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          background: 'rgba(0,0,0,0.5)',
+          color: 'white',
+          border: '1px solid white',
+          borderRadius: '5px',
+          padding: '8px 15px',
+          cursor: 'pointer',
+          zIndex: 1
+        }}
+      >
+        ← Назад
+      </button>
+      
       {/* Фоновое изображение с затемнением */}
       <div style={{
         position: 'fixed',
@@ -115,32 +137,35 @@ function CreateGame() {
         zIndex: -1
       }}></div>
 
-      {/* Основной контейнер */}
+      {/* Основной контейнер - теперь он всегда по центру */}
       <div style={{
         background: 'rgba(25, 25, 25, 0.7)',
         border: '2px solid #999',
         borderRadius: '12px',
         padding: '30px 40px',
+        width: '90%',
         maxWidth: '700px',
-        width: '100%',
         textAlign: 'center',
         boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
-        margin: '20px auto'
+        margin: '20px auto',
+        position: 'relative',
+        top: '0',
+        transform: 'none'
       }}>
-        <h1 style={{
-          marginBottom: '30px',
-          fontSize: '28px',
-          color: 'white'
-        }}>Создание игры</h1>
-        
         {!gameCode ? (
           <div style={{ 
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '15px',
-            flexWrap: 'wrap'
+            gap: '20px'
           }}>
+            <h1 style={{
+              marginBottom: '10px',
+              fontSize: '28px',
+              color: 'white'
+            }}>Создание игры</h1>
+            
             <input
               type="text"
               placeholder="Ваше имя"
@@ -149,7 +174,8 @@ function CreateGame() {
               style={{
                 padding: '12px 15px',
                 fontSize: '16px',
-                width: '200px',
+                width: '100%',
+                maxWidth: '300px',
                 borderRadius: '8px',
                 border: '1px solid #aaa',
                 background: 'rgba(255,255,255,0.85)',
@@ -169,7 +195,8 @@ function CreateGame() {
                 cursor: 'pointer',
                 fontSize: '16px',
                 transition: 'all 0.3s ease',
-                minWidth: '180px'
+                width: '100%',
+                maxWidth: '300px'
               }}
             >
               Создать комнату
@@ -177,6 +204,12 @@ function CreateGame() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h1 style={{
+              marginBottom: '10px',
+              fontSize: '28px',
+              color: 'white'
+            }}>Комната создана</h1>
+            
             <div style={{
               background: 'rgba(70, 70, 90, 0.6)',
               borderLeft: '6px solid #90caf9',
@@ -185,7 +218,7 @@ function CreateGame() {
               backdropFilter: 'blur(6px)',
               boxShadow: '0 0 12px rgba(144,202,249,0.4)'
             }}>
-              <p style={{ margin: '0 0 10px 0', color: '#e3f2fd' }}>Комната создана! Сообщите игрокам:</p>
+              <p style={{ margin: '0 0 10px 0', color: '#e3f2fd' }}>Сообщите игрокам:</p>
               <p style={{ 
                 margin: '8px 0',
                 fontSize: '18px',
@@ -260,20 +293,7 @@ function CreateGame() {
         )}
       </div>
       
-      <footer style={{
-        width: '100%',
-        background: 'rgba(30, 30, 30, 0.85)',
-        color: '#ccc',
-        textAlign: 'center',
-        padding: '10px 0',
-        fontSize: '14px',
-        borderTop: '1px solid #777',
-        position: 'fixed',
-        bottom: '0',
-        left: '0'
-      }}>
-        Разработали топото, 2025
-      </footer>
+        
     </div>
   );
 }

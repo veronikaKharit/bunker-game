@@ -28,15 +28,15 @@ body::before {
   background: rgba(25, 25, 25, 0.7);
   border: 2px solid #999;
   border-radius: 12px;
-  padding: 30px 40px;
+  padding: 30px 20px;
   max-width: 700px;
-  margin: 100px auto 20px;
+  margin: 110px auto 20px;
   text-align: center;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 .welcome-container h1 {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   font-size: 28px;
 }
 
@@ -152,7 +152,22 @@ footer {
 }
 
 .welcome-container {
-  margin-top: 150px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.welcome-container button {
+  width: 200px;
+}
+
+.welcome-container a {
+  width: 200px;
+}
+
+.welcome-container a button {
+  width: 100%;
 }
 
 input[type="text"] {
@@ -310,7 +325,7 @@ footer {
 }
 
 .notification.success {
-  background: linear-gradient(135deg, rgba(46, 125, 50, 0.8), rgba(27, 94, 32, 0.9));
+  background: linear-gradient(135deg, rgba(110, 137, 225, 0.8), rgba(124, 140, 240, 0.9));
   border: 1px solid #2e7d32;
 }
 
