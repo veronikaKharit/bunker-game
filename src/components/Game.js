@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import data from '../data.json';
 import dataPlayer from '../dataPlayer.json';
+import { Trash2 } from 'lucide-react';
 
 // Списки для генерации характеристик
 const GENDERS = dataPlayer.genders.map(item => item.gender);
@@ -1002,9 +1003,8 @@ const removePlayer = (playerToRemove) => {
             color: 'white',
             marginBottom: '20px'
           }}>
-            Таблица характеристик
+            Таблица характеристик 
           </h2>
-          
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
@@ -1043,8 +1043,16 @@ const removePlayer = (playerToRemove) => {
                           : 'transparent',
                       position: 'relative'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>
+                      <div style={{ display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', // Добавлено для вертикального выравнивания
+                        width: '100%' }}>
+                        <span style={{ 
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          paddingRight: '8px' 
+                        }}>
                           {player} {player === playerName && "(Вы)"}
                         </span>
                         {isMaster && !gameOver && (
@@ -1054,25 +1062,30 @@ const removePlayer = (playerToRemove) => {
                               background: '#ff5555',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '20%',
-                              width: '10px',
-                              height: '30px',
-                              cursor: 'pointer',
-                              fontSize: '16px',
+                              borderRadius: '4px', // Квадратные углы вместо круглых
+                              width: '28px',       // Фиксированная ширина
+                              height: '28px',      // Фиксированная высота (равная ширине)
+                              flexShrink: 0,       // Предотвращает сжатие
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              marginLeft: '-15px',
-                              boxShadow: '0 0 5px rgba(255, 0, 0, 0.7)',
-                              transition: 'all 0.3s ease'
+                              cursor: 'pointer',
+                              boxShadow: '0 0 3px rgba(255, 0, 0, 0.7)',
+                              transition: 'transform 0.3s ease',
+                              padding: 0, // Убираем внутренние отступы
+                              margin: 0, // Отступ справа для выравнивания
+                              marginLeft: '8px' // Отступ слева для выравнивания
                             }}
                             title="Удалить игрока"
                             onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
                             onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           >
-                            🗑️
+                            <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Trash2 size={20} color="white" />
+                            </div>
                           </button>
-                        )}
+                          
+                        )} 
                       </div>
                     </th>
                   ))}
