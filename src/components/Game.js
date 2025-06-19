@@ -21,18 +21,7 @@ const HOBBIES = dataPlayer.hobbies.map(item => item.hobby);
 const BACKPACK_ITEMS = dataPlayer.items.map(item => item.item);
 const ADDITIONAL_INFO = dataPlayer.facts.map(item => item.fact);
 
-const traitsList = [
-  { key: 'gender', label: 'Биология' },
-  { key: 'bodyType', label: 'Телосложение' },
-  { key: 'trait', label: 'Человеческая черта' },
-  { key: 'profession', label: 'Профессия' },
-  { key: 'health', label: 'Здоровье' },
-  { key: 'hobby', label: 'Хобби' },
-  { key: 'backpack', label: 'Инвентарь' },
-  { key: 'additionalInfo', label: 'Дополнительное сведение' },
-];
-
-// Helper functions
+// Генератор случайных элементов из массива
 const getRandomElement = (array) => array[Math.floor(Math.random() * array.length)];
 
 // Генерация характеристик для игрока
@@ -89,7 +78,6 @@ const playTimerSound = () => {
 };
 
 function Game() {
-  // State
   const [disaster, setDisaster] = useState(null);
   const [bunker, setBunker] = useState(null);
   const [gameCode, setGameCode] = useState("");
@@ -107,19 +95,15 @@ function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [playerWon, setPlayerWon] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [showRules, setShowRules] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('connecting');
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState(null);
-const unsubscribeRef = useRef(null);
-
-  // Refs
   const location = useLocation();
   const navigate = useNavigate();
   const scrollContainerRef = useRef(null);
+  const scrollAmount = 100;
   const timerRef = useRef(null);
   const soundPlayedRef = useRef(false);
+  const [showRules, setShowRules] = useState(false);
 
+  // Фиксированные данные после начала игры
   const fixedPlayers = useRef([]);
   const fixedPlayerTraits = useRef({});
 
@@ -187,7 +171,6 @@ const unsubscribeRef = useRef(null);
     if (timerRef.current) clearInterval(timerRef.current);
     
     soundPlayedRef.current = false;
-    setTimeLeft(initialTime);
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -197,7 +180,12 @@ const unsubscribeRef = useRef(null);
           setTimerEnded(true);
           playTimerSound();
           setTimeout(() => setTimerEnded(false), 3000);
-          stopTimerForRoom(gameCode);
+          
+          // Обновляем состояние таймера в localStorage
+          const timerData = JSON.parse(localStorage.getItem(`timer-${gameCode}`)) || {};
+          timerData.running = false;
+          localStorage.setItem(`timer-${gameCode}`, JSON.stringify(timerData));
+          
           return 0;
         }
         return prev - 1;
@@ -381,135 +369,67 @@ const stopTimer = async () => {
   }
 };
 
+  // Форматирование времени
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Проверка, является ли текущий игрок мастером (первым в списке)
   const isMaster = players[0] === playerName;
 
-  // Render
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p>Загрузка данных игры...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="error-screen">
-        <h2>Ошибка</h2>
-        <p>{error}</p>
-        <button onClick={() => navigate('/')}>Вернуться на главную</button>
-      </div>
-    );
-  }
-
+  // Если игра еще не начата
   if (!gameStarted) {
     return (
-      <GameLobby 
-        gameCode={gameCode}
-        playerName={playerName}
-        players={players}
-        isMaster={isMaster}
-        navigate={navigate}
-        scrollUp={scrollUp}
-        scrollDown={scrollDown}
-        scrollContainerRef={scrollContainerRef}
-        onStartGame={async () => {
-          try {
-            const traits = {};
-            players.forEach(player => {
-              traits[player] = generatePlayerTraits();
-            });
-            
-            await startGame(gameCode, {
-              playerTraits: traits,
-              disaster: getRandomDisaster(),
-              bunker: getRandomBunker(),
-              revealedTraits: Object.keys(traits).reduce((acc, player) => {
-                acc[player] = {};
-                return acc;
-              }, {})
-            });
-            
-            fixedPlayers.current = [...players];
-            fixedPlayerTraits.current = traits;
-            setPlayerTraits(traits);
-          } catch (err) {
-            console.error('Ошибка начала игры:', err);
-            alert('Не удалось начать игру');
-          }
-        }}
-      />
-    );
-  }
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        position: 'relative',
+        color: 'white',
+        background: 'url(/public/images/retouch.jpg) no-repeat center center fixed',
+        backgroundSize: 'cover',
+        overflow: 'auto'
+      }}>
+        
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(5px)',
+          zIndex: -1
+        }}></div>
 
-  return (
-    <GamePlayingScreen
-      gameOver={gameOver}
-      playerWon={playerWon}
-      showResult={showResult}
-      setShowResult={setShowResult}
-      disaster={disaster}
-      bunker={bunker}
-      playerName={playerName}
-      isMaster={isMaster}
-      navigate={navigate}
-      scrollUp={scrollUp}
-      scrollDown={scrollDown}
-      scrollContainerRef={scrollContainerRef}
-      timerEnded={timerEnded}
-      timeLeft={timeLeft}
-      formatTime={formatTime}
-      timerMinutes={timerMinutes}
-      timerSeconds={timerSeconds}
-      setTimerMinutes={setTimerMinutes}
-      setTimerSeconds={setTimerSeconds}
-      timerRunning={timerRunning}
-      startTimer={startTimer}
-      stopTimer={stopTimer}
-      fixedPlayerTraits={fixedPlayerTraits}
-      revealedTraits={revealedTraits}
-      revealTrait={revealTrait}
-      traitsList={traitsList}
-      fixedPlayers={fixedPlayers}
-      removedPlayers={removedPlayers}
-      removePlayer={removePlayer}
-      showRules={showRules}
-    setShowRules={setShowRules}
-    />
-  );
-}
-
-// Компонент лобби игры
-const GameLobby = ({
-  gameCode,
-  playerName,
-  players,
-  isMaster,
-  navigate,
-  scrollUp,
-  scrollDown,
-  scrollContainerRef,
-  onStartGame
-}) => (
-  <div className="game-container">
-    <button 
-      onClick={() => navigate('/')}
-      className="back-button"
-    >
-      ← Назад
-    </button>
-    
-    <div className="scroll-buttons">
-      <button onClick={scrollUp}>↑</button>
-      <button onClick={scrollDown}>↓</button>
-    </div>
+        <button 
+          onClick={() => navigate('/')}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            backgroundColor: '#444',
+            color: 'white',
+            padding: '10px 20px',
+            border: '2px solid #999',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            zIndex: 100
+          }}
+        >
+          ← Назад
+        </button>
+        
+        <div className="scroll-buttons">
+          <button onClick={scrollUp}>↑</button>
+          <button onClick={scrollDown}>↓</button>
+        </div>
 
         <div 
           ref={scrollContainerRef}
@@ -704,152 +624,294 @@ const GameLobby = ({
         zIndex: -1
       }}></div>
 
-    <button 
-      onClick={() => navigate('/')}
-      className="back-button"
-    >
-      ← Назад
-    </button>
+      <button 
+        onClick={() => navigate('/')}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          backgroundColor: '#444',
+          color: 'white',
+          padding: '10px 20px',
+          border: '2px solid #999',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          zIndex: 100
+        }}
+      >
+        ← Назад
+      </button>
 
-    <div className="scroll-buttons">
-      <button onClick={scrollUp}>↑</button>
-      <button onClick={scrollDown}>↓</button>
-    </div>
-
-    <div 
-      ref={scrollContainerRef}
-      className="game-content"
-    >
-      <h1>{gameOver ? 'Игра окончена!' : 'Игра началась!'}</h1>
-
-      <div className="disaster-box">
-        <h2>Катаклизм: {disaster.title}</h2>
-        <p>{disaster.description}</p>
+      <div className="scroll-buttons">
+        <button onClick={scrollUp}>↑</button>
+        <button onClick={scrollDown}>↓</button>
       </div>
 
-      <div className="bunker-box">
-        <h2>Ваше убежище</h2>
-        <div className="bunker-details">
-          <div>
-            <p><strong>Размер:</strong> {bunker.size}</p>
-            <p><strong>Время нахождения:</strong> {bunker.time}</p>
-          </div>
-          <div>
-            <p><strong>Запасы еды:</strong> {bunker.food}</p>
-            <p><strong>Особенности:</strong> {bunker.features}</p>
+      <div 
+        ref={scrollContainerRef}
+        style={{
+          background: 'rgba(25, 25, 25, 0.7)',
+          border: '2px solid #999',
+          borderRadius: '12px',
+          padding: '40px',
+          width: '100%',
+          maxWidth: '900px',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          textAlign: 'center',
+          boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
+          margin: '20px auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none'
+          }
+        }}
+      >
+        <h1 style={{
+          marginBottom: '30px',
+          fontSize: '32px',
+          color: 'white',
+          textShadow: '0 0 10px rgba(255, 255, 255, 0.3)'
+        }}>
+          {gameOver ? 'Игра окончена!' : 'Игра началась!'}
+        </h1>
+
+        <div style={{
+          background: 'rgba(70, 70, 90, 0.6)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '30px',
+          borderLeft: '6px solid #ff5555'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            color: '#ff5555',
+            marginBottom: '15px'
+          }}>
+            Катаклизм: {disaster.title}
+          </h2>
+          <p style={{ fontSize: '18px' }}>{disaster.description}</p>
+        </div>
+
+        <div style={{
+          background: 'rgba(70, 70, 90, 0.6)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '30px',
+          borderLeft: '6px solid #55aaff'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            color: '#55aaff',
+            marginBottom: '15px'
+          }}>
+            Ваше убежище
+          </h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '20px',
+            textAlign: 'left'
+          }}>
+            <div>
+              <p><strong>Размер:</strong> {bunker.size}</p>
+              <p><strong>Время нахождения:</strong> {bunker.time}</p>
+            </div>
+            <div>
+              <p><strong>Запасы еды:</strong> {bunker.food}</p>
+              <p><strong>Особенности:</strong> {bunker.features}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="timer-box">
-        <h2>Таймер</h2>
-        <div className="timer-display">{formatTime(timeLeft)}</div>
-        
-        {isMaster && !gameOver && (
-          <>
-            {!timerRunning && (
-              <div className="timer-inputs">
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={timerMinutes}
-                  onChange={(e) => setTimerMinutes(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-                />
-                <span>:</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={timerSeconds}
-                  onChange={(e) => setTimerSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-                />
-              </div>
-            )}
-            
-            <div className="timer-controls">
-              {!timerRunning ? (
-                <button onClick={startTimer} className="timer-start">
-                  Старт
-                </button>
-              ) : (
-                <button onClick={stopTimer} className="timer-stop">
-                  Стоп
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {fixedPlayerTraits.current[playerName] && (
-        <div className="traits-box">
-          <h2>Ваши характеристики</h2>
+        <div style={{
+          background: 'rgba(70, 70, 90, 0.6)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '30px',
+          borderLeft: '6px solid #55ff55'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            color: '#55ff55',
+            marginBottom: '15px'
+          }}>
+            Таймер
+          </h2>
           
-          <div className="traits-grid">
-            {Object.entries(fixedPlayerTraits.current[playerName]).map(([key, value]) => (
-              <div key={key} className="trait-card">
-                <strong>{traitsList.find(t => t.key === key)?.label || key}:</strong>
-                <p>{value}</p>
-                {!revealedTraits[playerName]?.[key] && !gameOver && (
+          <div style={{ fontSize: '48px', fontWeight: 'bold', margin: '15px 0' }}>
+            {formatTime(timeLeft)}
+          </div>
+          
+          {isMaster && !gameOver && (
+            <>
+              {!timerRunning && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={timerMinutes}
+                    onChange={(e) => setTimerMinutes(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                    style={{
+                      width: '60px',
+                      padding: '8px',
+                      fontSize: '18px',
+                      textAlign: 'center',
+                      borderRadius: '4px',
+                      border: '1px solid #666'
+                    }}
+                  />
+                  <span style={{ fontSize: '24px', lineHeight: '40px' }}>:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={timerSeconds}
+                    onChange={(e) => setTimerSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                    style={{
+                      width: '60px',
+                      padding: '8px',
+                      fontSize: '18px',
+                      textAlign: 'center',
+                      borderRadius: '4px',
+                      border: '1px solid #666'
+                    }}
+                  />
+                </div>
+              )}
+              
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                {!timerRunning ? (
                   <button
-                    onClick={() => revealTrait(playerName, key)}
-                    className="reveal-button"
-                    title="Раскрыть для всех"
+                    onClick={startTimer}
+                    style={{
+                      backgroundColor: '#55ff55',
+                      color: '#333',
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold'
+                    }}
                   >
-                    Раскрыть
+                    Старт
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopTimer}
+                    style={{
+                      backgroundColor: '#ff5555',
+                      color: '#fff',
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Стоп
                   </button>
                 )}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
-      )}
 
-      <div className="players-table-container">
-        <h2>Таблица характеристик</h2>
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Характеристика</th>
-                {[...fixedPlayers.current]
-                  .sort((a, b) => {
-                    const aRemoved = removedPlayers.includes(a);
-                    const bRemoved = removedPlayers.includes(b);
-                    if (aRemoved && !bRemoved) return 1;
-                    if (!aRemoved && bRemoved) return -1;
-                    return 0;
-                  })
-                  .map(player => (
-                  <th 
-                    key={player} 
-                    className={`
-                      ${player === playerName ? 'you' : ''}
-                      ${removedPlayers.includes(player) ? 'removed' : ''}
-                      ${gameOver && !removedPlayers.includes(player) ? 'winner' : ''}
-                    `}
-                  >
-                    <div className="player-header">
-                      <span>{player} {player === playerName && "(Вы)"}</span>
-                      {isMaster && !gameOver && (
-                        <button
-                          onClick={() => removePlayer(player)}
-                          className="remove-player-button"
-                          title="Удалить игрока"
-                        >
-                          <Trash2 size={20} color="white" />
-                        </button>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {traitsList.map(trait => (
-                <tr key={trait.key}>
-                  <td>{trait.label}</td>
+        {fixedPlayerTraits.current[playerName] && (
+          <div style={{
+            background: 'rgba(70, 70, 90, 0.6)',
+            borderRadius: '12px',
+            padding: '25px',
+            marginBottom: '30px',
+            borderLeft: '6px solid #ffcc55'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              color: '#ffcc55',
+              marginBottom: '20px'
+            }}>
+              Ваши характеристики
+            </h2>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '15px',
+              textAlign: 'left'
+            }}>
+              {Object.entries(fixedPlayerTraits.current[playerName]).map(([key, value]) => (
+                <div key={key} style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '15px',
+                  borderRadius: '8px',
+                  position: 'relative'
+                }}>
+                  <strong style={{ color: '#ffcc55' }}>
+                    {traitsList.find(t => t.key === key)?.label || key}:
+                  </strong>
+                  <p>{value}</p>
+                  {!revealedTraits[playerName]?.[key] && !gameOver && (
+                    <button
+                      onClick={() => revealTrait(playerName, key)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '10px',
+                        background: '#ffcc55',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '20%',
+                        width: '25px',
+                        height: '40px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                      title="Раскрыть для всех"
+                    >
+                      Раскрыть
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: '30px' }}>
+          <h2 style={{
+            fontSize: '24px',
+            color: 'white',
+            marginBottom: '20px'
+          }}>
+            Таблица характеристик 
+          </h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              background: 'rgba(70, 70, 90, 0.6)',
+              borderRadius: '8px',
+              borderCollapse: 'separate',
+              borderSpacing: '0'
+            }}>
+              <thead>
+                <tr style={{
+                  background: 'rgba(90, 90, 110, 0.8)'
+                }}>
+                  <th style={{
+                    padding: '15px',
+                    textAlign: 'center',
+                    borderBottom: '2px solid #999'
+                  }}>Характеристика</th>
                   {[...fixedPlayers.current]
                     .sort((a, b) => {
                       const aRemoved = removedPlayers.includes(a);
@@ -858,263 +920,229 @@ const GameLobby = ({
                       if (!aRemoved && bRemoved) return -1;
                       return 0;
                     })
-                    .map(player => {
-                    const isRevealed = revealedTraits[player] && revealedTraits[player][trait.key];
-                    const isRemoved = removedPlayers.includes(player);
-                    return (
-                      <td 
-                        key={`${player}-${trait.key}`}
-                        className={`
-                          ${player === playerName ? 'you' : ''}
-                          ${isRemoved ? 'removed' : ''}
-                          ${gameOver && !isRemoved ? 'winner' : ''}
-                        `}
-                      >
-                        {revealedTraits[player]?.[trait.key] || '❓'}
-                      </td>
-                    );
-                  })}
+                    .map(player => (
+                    <th key={player} style={{
+                      padding: '20px',
+                      textAlign: 'center',
+                      borderBottom: '2px solid #999',
+                      color: player === playerName ? '#ffcc55' : 'white',
+                      background: removedPlayers.includes(player) 
+                        ? 'rgba(50, 50, 50, 0.8)' 
+                        : gameOver && !removedPlayers.includes(player)
+                          ? 'rgba(0, 200, 255, 0.3)'
+                          : 'transparent',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', // Добавлено для вертикального выравнивания
+                        width: '100%' }}>
+                        <span style={{ 
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          paddingRight: '8px' 
+                        }}>
+                          {player} {player === playerName && "(Вы)"}
+                        </span>
+                        {isMaster && !gameOver && (
+                          <button
+                            onClick={() => removePlayer(player)}
+                            style={{
+                              background: '#ff5555',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px', // Квадратные углы вместо круглых
+                              width: '28px',       // Фиксированная ширина
+                              height: '28px',      // Фиксированная высота (равная ширине)
+                              flexShrink: 0,       // Предотвращает сжатие
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              boxShadow: '0 0 3px rgba(255, 0, 0, 0.7)',
+                              transition: 'transform 0.3s ease',
+                              padding: 0, // Убираем внутренние отступы
+                              margin: 0, // Отступ справа для выравнивания
+                              marginLeft: '8px' // Отступ слева для выравнивания
+                            }}
+                            title="Удалить игрока"
+                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Trash2 size={20} color="white" />
+                            </div>
+                          </button>
+                          
+                        )} 
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {traitsList.map(trait => (
+                  <tr key={trait.key} style={{
+                    background: 'rgba(60, 60, 80, 0.6)'
+                  }}>
+                    <td style={{
+                      padding: '12px 15px',
+                      borderBottom: '1px solid #666'
+                    }}>{trait.label}</td>
+                    {[...fixedPlayers.current]
+                      .sort((a, b) => {
+                        const aRemoved = removedPlayers.includes(a);
+                        const bRemoved = removedPlayers.includes(b);
+                        if (aRemoved && !bRemoved) return 1;
+                        if (!aRemoved && bRemoved) return -1;
+                        return 0;
+                      })
+                      .map(player => {
+                      const isRevealed = revealedTraits[player] && revealedTraits[player][trait.key];
+                      const isRemoved = removedPlayers.includes(player);
+                      return (
+                        <td key={`${player}-${trait.key}`} style={{
+                          padding: '12px 15px',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #666',
+                          background: player === playerName 
+                            ? 'rgba(255, 204, 85, 0.1)' 
+                            : isRemoved 
+                              ? 'rgba(50, 50, 50, 0.8)' 
+                              : gameOver && !isRemoved
+                                ? 'rgba(0, 200, 255, 0.3)'
+                                : 'transparent',
+                          color: gameOver && !isRemoved ? '#00ffff' : 'inherit'
+                        }}>
+                          {revealedTraits[player]?.[trait.key] || '❓'}
+
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
 
-    <style jsx>{`
-      .game-container {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        position: relative;
-        color: white;
-        background: url(/public/images/retouch.jpg) no-repeat center center fixed;
-        background-size: cover;
-        overflow: auto;
-      }
-      
-      .result-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        animation: fadeIn 0.3s ease-in-out;
-      }
-      
-      .result-box {
-        background: rgba(0, 0, 0, 0.8);
-        padding: 40px;
-        border-radius: 20px;
-        text-align: center;
-        max-width: 80%;
-      }
-      
-      .result-box h1 {
-        font-size: 48px;
-        margin-bottom: 20px;
-      }
-      
-      .result-box p {
-        font-size: 32px;
-        color: white;
-      }
-      
-      .game-content {
-        background: rgba(25, 25, 25, 0.7);
-        border: 2px solid #999;
-        border-radius: 12px;
-        padding: 40px;
-        width: 100%;
-        max-width: 900px;
-        max-height: 80vh;
-        overflow: auto;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-        margin: 20px auto;
-      }
-      
-      .game-content h1 {
-        margin-bottom: 30px;
-        font-size: 32px;
-        color: white;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-      }
-      
-      .disaster-box, .bunker-box, .timer-box, .traits-box {
-        background: rgba(70, 70, 90, 0.6);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 30px;
-        text-align: left;
-      }
-      
-      .disaster-box {
-        border-left: 6px solid #ff5555;
-      }
-      
-      .bunker-box {
-        border-left: 6px solid #55aaff;
-      }
-      
-      .timer-box {
-        border-left: 6px solid #55ff55;
-      }
-      
-      .traits-box {
-        border-left: 6px solid #ffcc55;
-      }
-      
-      .disaster-box h2 {
-        color: #ff5555;
-      }
-      
-      .bunker-box h2 {
-        color: #55aaff;
-      }
-      
-      .timer-box h2 {
-        color: #55ff55;
-      }
-      
-      .traits-box h2 {
-        color: #ffcc55;
-      }
-      
-      .bunker-details {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-      }
-      
-      .timer-display {
-        font-size: 48px;
-        font-weight: bold;
-        margin: 15px 0;
-      }
-      
-      .timer-inputs {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 15px;
-      }
-      
-      .timer-inputs input {
-        width: 60px;
-        padding: 8px;
-        font-size: 18px;
-        text-align: center;
-        border-radius: 4px;
-        border: 1px solid #666;
-      }
-      
-      .timer-controls {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-      }
-      
-      .timer-start {
-        background-color: #55ff55;
-        color: #333;
-      }
-      
-      .timer-stop {
-        background-color: #ff5555;
-        color: #fff;
-      }
-      
-      .timer-start, .timer-stop {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-      }
-      
-      .traits-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-      }
-      
-      .trait-card {
-        background: rgba(0, 0, 0, 0.3);
-        padding: 15px;
-        border-radius: 8px;
-        position: relative;
-      }
-      
-      .reveal-button {
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        background: #ffcc55;
-        color: #333;
-        border: none;
-        border-radius: 20%;
-        width: 25px;
-        height: 40px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      
-      .players-table-container {
-        margin-bottom: 30px;
-      }
-      
-      .table-wrapper {
-        overflow-x: auto;
-      }
-      
-      table {
-        width: 100%;
-        background: rgba(70, 70, 90, 0.6);
-        border-radius: 8px;
-        border-collapse: separate;
-        border-spacing: 0;
-      }
-      
-      thead tr {
-        background: rgba(90, 90, 110, 0.8);
-      }
-      
-      th, td {
-        padding: 12px 15px;
-        text-align: center;
-        border-bottom: 1px solid #666;
-      }
-      
-      th.you {
-        color: #ffcc55;
-      }
-      
-      th.removed {
-        background: rgba(50, 50, 50, 0.8);
-      }
-      
-      th.winner {
-        background: rgba(0, 200, 255, 0.3);
-      }
-      
-      .player-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-      }
-          `}</style>
+      <style jsx>{`
+        .scroll-buttons {
+          position: fixed;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          z-index: 100;
+        }
+          .rules-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+  }
+    .close-rules {
+          position: absolute;
+          top: 5px;
+          right: 5px;
+          background-color: #ff5555;
+          color: white;
+          border: none;
+  border-radius: 20%; /* Круглая форма */
+  width: 10px; /* Фиксированная ширина */
+  height: 30px; /* Фиксированная высота */
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0; /* Убираем внутренние отступы */
+  line-height: 1; /* Нормализуем межстрочное расстояние */
+  transition: all 0.2s ease; /* Плавные анимации */
+        }
+           .rules-content h2 {
+    color: #788ca0;
+    font-size: 28px;
+    margin: 30px 0 20px;
+    border-bottom: 1px solid rgba(120, 140, 160, 0.4);
+  }
+  
+  .rules-content {
+    background: rgba(30, 35, 40, 0.95); /* Темно-серый фон */
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 40px;
+    width: 70%;
+    max-width: 1200px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Кастомный скроллбар */
+  .rules-content::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .rules-content::-webkit-scrollbar-track {
+    background: rgba(50, 50, 50, 0.5);
+    border-radius: 4px;
+  }
+  
+  .rules-content::-webkit-scrollbar-thumb {
+    background: rgba(100, 120, 140, 0.7); /* Серо-голубой ползунок */
+    border-radius: 4px;
+  }
+  
+  .rules-content::-webkit-scrollbar-thumb:hover {
+    background: #788ca0;
+  }
+        .scroll-buttons button {
+          background-color: rgba(40, 40, 40, 0.85);
+          color: #FFFFFF;
+          border: 1px solid #FFFFFF;
+          width: 40px;
+          height: 40px;
+          border-radius: 6px;
+          font-size: 24px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .scroll-buttons button:hover {
+          background-color: rgba(60, 60, 60, 0.9);
+          transform: scale(1.1);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+          20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      `}</style>
       
        {/* Кнопка "Правила игры" */}
         <button 
@@ -1335,7 +1363,6 @@ const GameLobby = ({
         )}
     </div>
   );
-
+}
 
 export default Game;
-
