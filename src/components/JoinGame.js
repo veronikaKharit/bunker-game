@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../firebase'; // Импортируйте инициализированный экземпляр Firestore
+import { doc, getDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 
 function JoinGame() {
   const [playerName, setPlayerName] = useState("");
@@ -7,53 +9,71 @@ function JoinGame() {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [unsubscribe, setUnsubscribe] = useState(null);
   const navigate = useNavigate();
   
+  // Очистка подписки при размонтировании компонента
+  useEffect(() => {
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [unsubscribe]);
+
   const handleBack = () => {
     navigate(-1);
   };
 
-  const handleJoinGame = () => {
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-    const room = rooms[gameCode];
+  const handleJoinGame = async () => {
+    try {
+      const roomDocRef = doc(db, 'rooms', gameCode);
+      const roomDoc = await getDoc(roomDocRef);
 
-    if (!room) {
-      setErrorMessage("Комната с таким кодом не найдена.");
-      return;
-    }
-
-    if (room.password !== password) {
-      setErrorMessage("Неверный пароль.");
-      return;
-    }
-
-    if (room.players.includes(playerName)) {
-      setErrorMessage("Игрок с таким именем уже в комнате.");
-      return;
-    }
-
-    if (room.gameStarted) {
-      setErrorMessage("Игра уже началась.");
-      return;
-    }
-
-    room.players.push(playerName);
-    localStorage.setItem('rooms', JSON.stringify(rooms));
-    
-    const event = new Event('storage');
-    window.dispatchEvent(event);
-    
-    setSuccess(true);
-    
-    const checkGameStart = setInterval(() => {
-      const updatedRooms = JSON.parse(localStorage.getItem('rooms')) || {};
-      const updatedRoom = updatedRooms[gameCode];
-      
-      if (updatedRoom && updatedRoom.gameStarted) {
-        clearInterval(checkGameStart);
-        navigate(`/game?code=${gameCode}&player=${playerName}`);
+      if (!roomDoc.exists()) {
+        setErrorMessage("Комната с таким кодом не найдена.");
+        return;
       }
-    }, 1000);
+
+      const room = roomDoc.data();
+
+      if (room.password !== password) {
+        setErrorMessage("Неверный пароль.");
+        return;
+      }
+
+      if (room.players.includes(playerName)) {
+        setErrorMessage("Игрок с таким именем уже в комнате.");
+        return;
+      }
+
+      if (room.gameStarted) {
+        setErrorMessage("Игра уже началась.");
+        return;
+      }
+
+      // Обновляем список игроков в Firestore
+      await updateDoc(roomDocRef, {
+        players: arrayUnion(playerName)
+      });
+
+      setSuccess(true);
+      setErrorMessage("");
+
+      // Слушаем изменения комнаты в реальном времени
+      const unsub = onSnapshot(roomDocRef, (doc) => {
+        const updatedRoom = doc.data();
+        if (updatedRoom && updatedRoom.gameStarted) {
+          navigate(`/game?code=${gameCode}&player=${playerName}`);
+        }
+      });
+
+      setUnsubscribe(() => unsub);
+
+    } catch (error) {
+      console.error("Ошибка при присоединении к игре:", error);
+      setErrorMessage("Произошла ошибка. Попробуйте снова.");
+    }
   };
 
   return (

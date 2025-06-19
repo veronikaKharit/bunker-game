@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db, doc, setDoc, onSnapshot, updateDoc } from "../firebase"
+import { getRandomDisaster, getRandomBunker, generatePlayerTraits } from './Game.js'; // Предполагается, что эти функции определены в gameUtils.js
 
 function CreateGame() {
   const [playerName, setPlayerName] = useState("");
@@ -40,49 +42,82 @@ function CreateGame() {
     return Math.floor(1000 + Math.random() * 9000).toString();
   };
 
-  const handleCreateGame = () => {
-    if (!playerName) {
-      alert('Пожалуйста, введите имя');
-      return;
-    }
+  const handleCreateGame = async () => {
+  if (!playerName) {
+    alert('Пожалуйста, введите имя');
+    return;
+  }
 
-    const code = generateGameCode();
-    const pass = generatePassword();
+  const code = generateGameCode();
+  const pass = generatePassword();
+  
+  try {
+    // Создаем документ комнаты
+    const roomRef = doc(db, "rooms", code);
     
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-
-    rooms[code] = {
+    await setDoc(roomRef, {
       creator: playerName,
       players: [playerName],
       password: pass,
       gameStarted: false,
-    };
-
-    localStorage.setItem('rooms', JSON.stringify(rooms));
+    });
+    
     setPlayers([playerName]);
     setGameCode(code);
     setPassword(pass);
-  };
-
-  const startGame = () => {
-    if (players.length < 2) {
-      alert("Необходимо хотя бы 2 игрока для начала игры.");
-      return;
-    }
-
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-    const room = rooms[gameCode];
     
-    if (room) {
-      room.gameStarted = true;
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-      
-      const event = new Event('storage');
-      window.dispatchEvent(event);
-      
-      navigate(`/game?code=${gameCode}&player=${playerName}`);
-    }
-  };
+    // Слушаем изменения комнаты
+    const unsubscribe = onSnapshot(roomRef, (doc) => {
+      const room = doc.data();
+      if (room) {
+        setPlayers(room.players || []);
+      }
+    });
+    
+    // Сохраняем функцию отписки для очистки
+    return () => unsubscribe();
+    
+  } catch (error) {
+    console.error("Ошибка создания комнаты:", error);
+    alert(`Ошибка создания комнаты: ${error.message}`);
+  }
+};
+
+  const startGame = async () => {
+  if (players.length < 2) {
+    alert("Необходимо хотя бы 2 игрока для начала игры.");
+    return;
+  }
+
+  try {
+    const roomRef = doc(db, "rooms", gameCode);
+    
+    // Генерируем данные для игры
+    const disaster = getRandomDisaster();
+    const bunker = getRandomBunker();
+    
+    const playerTraits = {};
+    players.forEach(player => {
+      playerTraits[player] = generatePlayerTraits();
+    });
+
+    await updateDoc(roomRef, {
+      gameStarted: true,
+      disaster: disaster,
+      bunker: bunker,
+      playerTraits: playerTraits,
+      revealedTraits: {},
+      removedPlayers: []
+    });
+    
+    navigate(`/game?code=${gameCode}&player=${playerName}`);
+    
+  } catch (error) {
+    console.error("Ошибка начала игры:", error);
+    alert(`Ошибка начала игры: ${error.message}`);
+  }
+};
+
 
   return (
     <div style={{

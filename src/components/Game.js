@@ -2,7 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import data from '../data.json';
 import dataPlayer from '../dataPlayer.json';
-import { Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';import { 
+  db, 
+  doc, 
+  onSnapshot, 
+  updateDoc,
+  getDoc,
+  setDoc, 
+} from "../firebase";
 
 // Списки для генерации характеристик
 const GENDERS = dataPlayer.genders.map(item => item.gender);
@@ -18,7 +25,7 @@ const ADDITIONAL_INFO = dataPlayer.facts.map(item => item.fact);
 const getRandomElement = (array) => array[Math.floor(Math.random() * array.length)];
 
 // Генерация характеристик для игрока
-const generatePlayerTraits = () => ({
+export const generatePlayerTraits = () => ({
   gender: getRandomElement(GENDERS),
   bodyType: getRandomElement(BODY_TYPES),
   trait: getRandomElement(TRAITS),
@@ -43,11 +50,11 @@ const BUNKER = {
   features: "Система очистки воздуха, гидропонная ферма, генератор на геотермальной энергии"
 };*/
 
-const getRandomDisaster = () => {
+export const getRandomDisaster = () => {
   return data.disasters[Math.floor(Math.random() * data.disasters.length)];
 };
 
-const getRandomBunker = () => {
+export const getRandomBunker = () => {
   return data.bunkers[Math.floor(Math.random() * data.bunkers.length)];
 };
 
@@ -113,7 +120,7 @@ function Game() {
   };
 
   // Проверка на окончание игры (когда осталось <= половины игроков)
-  const checkGameOver = (currentRemovedPlayers) => {
+  const checkGameOver = async (currentRemovedPlayers) => {
   const totalPlayers = fixedPlayers.current.length;
   const remainingPlayers = totalPlayers - currentRemovedPlayers.length;
   
@@ -123,36 +130,35 @@ function Game() {
     setPlayerWon(won);
     setShowResult(true);
     
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-    const room = rooms[gameCode];
-    
-    if (room) {
-      // Инициализируем revealedTraits если их нет
-      if (!room.revealedTraits) {
-        room.revealedTraits = {};
-      }
+    try {
+      const roomRef = doc(db, "rooms", gameCode);
       
-      // Раскрываем ВСЕХ игроков 
+      // Получаем текущие данные комнаты
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) return;
+      
+      const room = roomSnap.data();
+      
+      // Создаем объект со всеми раскрытыми характеристиками
+      const allRevealed = {};
       fixedPlayers.current.forEach(player => {
-        if (!room.revealedTraits[player]) {
-          room.revealedTraits[player] = {};
+        // Если характеристики игрока уже есть в данных - используем их
+        if (room.playerTraits && room.playerTraits[player]) {
+          allRevealed[player] = room.playerTraits[player];
         }
-        
-        // Раскрываем все характеристики для каждого игрока
-        Object.keys(room.playerTraits[player]).forEach(key => {
-          room.revealedTraits[player][key] = room.playerTraits[player][key];
-        });
       });
       
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-      setRevealedTraits(room.revealedTraits);
+      // Обновляем документ в Firestore
+      await updateDoc(roomRef, {
+        revealedTraits: allRevealed
+      });
+      
+      // Обновляем локальное состояние
+      setRevealedTraits(allRevealed);
+      
+    } catch (error) {
+      console.error("Ошибка при завершении игры:", error);
     }
-    
-    /*
-    setTimeout(() => {
-      setShowResult(false);
-    }, 10000);
-    */
     
     return true;
   }
@@ -160,40 +166,6 @@ function Game() {
 };
 
   // Обработчик событий хранилища
-  const handleStorageChange = (e) => {
-    if (e.key === 'rooms') {
-      loadRoomData();
-    }
-    if (e.key === `timer-${gameCode}`) {
-      const timerData = JSON.parse(localStorage.getItem(`timer-${gameCode}`)) || {};
-      if (timerData.endTime) {
-        const remaining = Math.max(0, Math.floor((timerData.endTime - Date.now()) / 1000));
-        setTimeLeft(remaining);
-        
-        if (timerData.running && !timerRunning) {
-          setTimerRunning(true);
-          startTimerInterval();
-        } else if (!timerData.running && timerRunning) {
-          clearInterval(timerRef.current);
-          setTimerRunning(false);
-        }
-        
-        // Проверка на завершение таймера
-        if (remaining <= 0 && timerData.running) {
-          setTimerEnded(true);
-          if (!soundPlayedRef.current) {
-            playTimerSound();
-            soundPlayedRef.current = true;
-          }
-          setTimeout(() => {
-            setTimerEnded(false);
-            soundPlayedRef.current = false;
-          }, 3000);
-        }
-      }
-    }
-  };
-
   // Функция для запуска интервала таймера
   const startTimerInterval = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -221,263 +193,181 @@ function Game() {
     }, 1000);
   };
 
-  const loadRoomData = () => {
+  useEffect(() => {
   const params = new URLSearchParams(location.search);
   const code = params.get("code");
   const player = params.get("player");
   
   setGameCode(code);
   setPlayerName(player);
-
-  const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-  const room = rooms[code];
   
-  if (room) {
-    setPlayers(room.players);
-    setGameStarted(room.gameStarted);
-    
-    // Загружаем катастрофу и бункер (если уже есть)
-    if (room.disaster) {
-      setDisaster(room.disaster);
+  if (!code) return;
+
+  const roomRef = doc(db, "rooms", code);
+  
+  // Слушаем изменения комнаты
+  const unsubscribeRoom = onSnapshot(roomRef, (doc) => {
+    const room = doc.data();
+    if (room) {
+      setPlayers(room.players || []);
+      setGameStarted(room.gameStarted || false);
+      setDisaster(room.disaster || null);
+      setBunker(room.bunker || null);
+      setRevealedTraits(room.revealedTraits || {});
+      setRemovedPlayers(room.removedPlayers || []);
+      setPlayerTraits(room.playerTraits || {});
+
+      if (room.gameStarted) {
+        fixedPlayers.current = [...room.players];
+        fixedPlayerTraits.current = room.playerTraits || {};
+        checkGameOver(room.removedPlayers || []);
+      }
     }
-    if (room.bunker) {
-      setBunker(room.bunker);
+  });
+
+  // Для таймера создаем отдельную коллекцию
+  const timerRef = doc(db, "timers", code);
+  const unsubscribeTimer = onSnapshot(timerRef, (doc) => {
+    const timerData = doc.data();
+    if (timerData) {
+      // ... та же логика для таймера ...
     }
-    
-    // Если игра начата, но нет катастрофы/бункера — создаем (только мастер)
-    if (room.gameStarted && !room.disaster && room.players[0] === player) {
-      room.disaster = getRandomDisaster();
-      room.bunker = getRandomBunker();
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-      setDisaster(room.disaster);
-      setBunker(room.bunker);
-    }
+  });
+
+  return () => {
+    unsubscribeRoom();
+    unsubscribeTimer();
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+}, [location]);
 
 
-    if (room.revealedTraits) {
-      setRevealedTraits(room.revealedTraits);
-    }
-    
-    if (room.removedPlayers) {
-      setRemovedPlayers(room.removedPlayers);
-      checkGameOver(room.removedPlayers);
-    }
-    
-    // Проверяем, является ли текущий игрок мастером (первым в списке)
-    const isMaster = room.players[0] === player;
-    
-    if (room.gameStarted) {
-      // Фиксируем список игроков
-      fixedPlayers.current = [...room.players];
-      
-      // Если данные игроков уже есть в комнате - используем их
-      if (room.playerTraits) {
-        fixedPlayerTraits.current = room.playerTraits;
-        setPlayerTraits({...room.playerTraits});
-      } 
-      // Если данных нет и мы мастер - генерируем их для всех
-      else if (isMaster) {
-        const traits = {};
-        fixedPlayers.current.forEach(player => {
-          traits[player] = generatePlayerTraits();
-        });
-        
-        fixedPlayerTraits.current = traits;
-        setPlayerTraits({...traits});
-        
-        // Сохраняем сгенерированные данные в комнату
-        room.playerTraits = traits;
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-      }
-      
-      // Инициализируем revealedTraits если их нет
-      if (!room.revealedTraits) {
-        const initialRevealed = {};
-        fixedPlayers.current.forEach(player => {
-          initialRevealed[player] = {};
-        });
-        
-        room.revealedTraits = initialRevealed;
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-        setRevealedTraits(initialRevealed);
-      }
 
-      // Загружаем катастрофу и бункер из комнаты или инициализируем новые
-      if (room.disaster) {
-        setDisaster(room.disaster);
-      } else if (isMaster) {
-        room.disaster = getRandomDisaster();
-        setDisaster(room.disaster);
-      }
+  // Раскрытие характеристики для всех игроков
+  const revealTrait = async (player, traitKey) => {
+  if (window.confirm('Вы уверены, что хотите раскрыть эту характеристику для всех игроков?')) {
+    try {
+      const roomRef = doc(db, "rooms", gameCode);
       
-      if (room.bunker) {
-        setBunker(room.bunker);
-      } else if (isMaster) {
-        room.bunker = getRandomBunker();
-        setBunker(room.bunker);
-      }
+      await updateDoc(roomRef, {
+        [`revealedTraits.${player}.${traitKey}`]: fixedPlayerTraits.current[player][traitKey]
+      });
       
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-    }
-  }
-
-  // Загружаем состояние таймера из localStorage
-  const timerData = JSON.parse(localStorage.getItem(`timer-${code}`)) || {};
-  if (timerData.endTime) {
-    const remaining = Math.max(0, Math.floor((timerData.endTime - Date.now()) / 1000));
-    setTimeLeft(remaining);
-    if (timerData.running && remaining > 0) {
-      setTimerRunning(true);
-      startTimerInterval();
+    } catch (error) {
+      console.error("Ошибка раскрытия характеристики:", error);
     }
   }
 };
 
-  useEffect(() => {
-  loadRoomData();
-  
-    // Загружаем состояние таймера
-    const timerData = JSON.parse(localStorage.getItem(`timer-${gameCode}`)) || {};
-    if (timerData.endTime) {
-      const remaining = Math.max(0, Math.floor((timerData.endTime - Date.now()) / 1000));
-      setTimeLeft(remaining);
-      if (timerData.running && remaining > 0) {
-        setTimerRunning(true);
-        startTimerInterval();
-      }
-    }
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    if (!gameStarted) {
-      const interval = setInterval(loadRoomData, 1000);
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [location, navigate, gameStarted]); 
-
-  // Раскрытие характеристики для всех игроков
-  const revealTrait = (player, traitKey) => {
-    if (window.confirm('Вы уверены, что хотите раскрыть эту характеристику для всех игроков?')) {
-      const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-      const room = rooms[gameCode];
-      
-      if (room) {
-
-        if (!room.revealedTraits) {
-          room.revealedTraits = {};
-        }
-        
-        if (!room.revealedTraits[player]) {
-          room.revealedTraits[player] = {};
-          console.log(1);
-        }
-        else {
-          console.log(room.revealedTraits[player]);
-          console.log(room.revealedTraits['ggg']);
-        }
-        
-        room.revealedTraits[player][traitKey] = fixedPlayerTraits.current[player][traitKey];
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-        
-        setRevealedTraits(prev => ({
-          ...prev,
-          [player]: {
-            ...prev[player],
-            [traitKey]: fixedPlayerTraits.current[player][traitKey]
-          }
-        }));
-      }
-    }
-  };
-
   // Удаление игрока
-const removePlayer = (playerToRemove) => {
-  if (window.confirm(`Вы точно хотите удалить ${playerToRemove} из игры?`)) {
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || {};
-    const room = rooms[gameCode];
+const removePlayer = async (playerToRemove) => {
+  if (!window.confirm(`Вы точно хотите удалить ${playerToRemove} из игры?`)) {
+    return;
+  }
+
+  try {
+    const roomDocRef = doc(db, "rooms", gameCode);
+    const roomDoc = await getDoc(roomDocRef);
+
+    if (!roomDoc.exists()) {
+      alert("Комната не найдена!");
+      return;
+    }
+
+    const roomData = roomDoc.data();
+    const currentRemovedPlayers = roomData.removedPlayers || [];
+    const currentRevealedTraits = roomData.revealedTraits || {};
+
+    // Если игрок уже удален - ничего не делаем
+    if (currentRemovedPlayers.includes(playerToRemove)) {
+      return;
+    }
+
+    // Проверяем наличие характеристик игрока
+    if (!roomData.playerTraits || !roomData.playerTraits[playerToRemove]) {
+      throw new Error(`Характеристики игрока ${playerToRemove} не найдены`);
+    }
+
+    // Создаем обновленные данные
+    const updatedRemovedPlayers = [...currentRemovedPlayers, playerToRemove];
+    const updatedRevealedTraits = {
+      ...currentRevealedTraits,
+      [playerToRemove]: { ...roomData.playerTraits[playerToRemove] }
+    };
+
+    // Обновляем документ в Firestore
+    await updateDoc(roomDocRef, {
+      removedPlayers: updatedRemovedPlayers,
+      revealedTraits: updatedRevealedTraits
+    });
+
+    // Обновляем локальное состояние
+    setRemovedPlayers(updatedRemovedPlayers);
+    setRevealedTraits(updatedRevealedTraits);
+
+    // Проверяем, завершена ли игра
+    const isGameOver = checkGameOver(updatedRemovedPlayers, roomData.players);
     
-    if (room) {
-      if (!room.removedPlayers) {
-        room.removedPlayers = [];
+    if (isGameOver) {
+      // Определяем, является ли текущий игрок победителем
+      const isWinner = !updatedRemovedPlayers.includes(playerName);
+      setPlayerWon(isWinner);
+      setShowResult(true);
+      
+      // Для проигравших скрываем сообщение через 10 секунд
+      if (!isWinner) {
+        setTimeout(() => setShowResult(false), 10000);
       }
-      
-      if (!room.removedPlayers.includes(playerToRemove)) {
-        room.removedPlayers.push(playerToRemove);
-      }
-      
-      if (!room.revealedTraits) {
-        room.revealedTraits = {};
-      }
-      
-      if (!room.revealedTraits[playerToRemove]) {
-        room.revealedTraits[playerToRemove] = {};
-      }
-      
-      // Берем данные из сохраненных в комнате
-      const playerTraits = room.playerTraits[playerToRemove];
-      
-      if (!playerTraits) {
-        console.error(`Данные игрока ${playerToRemove} не найдены`);
-        return;
-      }
-      
-      // Раскрываем все характеристики
-      Object.keys(playerTraits).forEach(key => {
-        room.revealedTraits[playerToRemove][key] = playerTraits[key];
-      });
-      
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-      
-      setRemovedPlayers([...room.removedPlayers]);
-      setRevealedTraits({...room.revealedTraits});
-      
-      if (!checkGameOver(room.removedPlayers)) {
-        if (playerToRemove === playerName && playerName !== players[0]) {
-          setPlayerWon(false);
-          setShowResult(true);
-          setTimeout(() => setShowResult(false), 10000);
-        }
+    } else {
+      // Если игра продолжается, показываем проигрыш только удаленному игроку
+      if (playerToRemove === playerName) {
+        setPlayerWon(false);
+        setShowResult(true);
+        setTimeout(() => setShowResult(false), 10000);
       }
     }
+
+  } catch (error) {
+    console.error("Ошибка при удалении игрока:", error);
+    alert(`Ошибка: ${error.message}`);
   }
 };
 
   // Управление таймером
-  const startTimer = () => {
-    const totalSeconds = timerMinutes * 60 + timerSeconds;
-    setTimeLeft(totalSeconds);
-    setTimerRunning(true);
-    setTimerEnded(false);
-    
-    const endTime = Date.now() + totalSeconds * 1000;
-    const timerData = { endTime, running: true };
-    localStorage.setItem(`timer-${gameCode}`, JSON.stringify(timerData));
+  const startTimer = async () => {
+  const totalSeconds = timerMinutes * 60 + timerSeconds;
+  setTimeLeft(totalSeconds);
+  setTimerRunning(true);
+  setTimerEnded(false);
+  
+  const endTime = Date.now() + totalSeconds * 1000;
+  
+  try {
+    const timerRef = doc(db, "timers", gameCode);
+    await setDoc(timerRef, {
+      endTime,
+      running: true
+    });
     
     startTimerInterval();
     
-    const event = new Event('storage');
-    window.dispatchEvent(event);
-  };
+  } catch (error) {
+    console.error("Ошибка запуска таймера:", error);
+  }
+};
 
-  const stopTimer = () => {
+const stopTimer = async () => {
+  try {
+    const timerRef = doc(db, "timers", gameCode);
+    await updateDoc(timerRef, { running: false });
+    
     clearInterval(timerRef.current);
     setTimerRunning(false);
     
-    const timerData = JSON.parse(localStorage.getItem(`timer-${gameCode}`)) || {};
-    timerData.running = false;
-    localStorage.setItem(`timer-${gameCode}`, JSON.stringify(timerData));
-    
-    const event = new Event('storage');
-    window.dispatchEvent(event);
-  };
+  } catch (error) {
+    console.error("Ошибка остановки таймера:", error);
+  }
+};
 
   // Форматирование времени
   const formatTime = (seconds) => {
@@ -683,7 +573,7 @@ const removePlayer = (playerToRemove) => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: playerWon 
+            background: !removedPlayers.includes(playerName) 
               ? 'rgba(0, 255, 255, 0.3)' 
               : 'rgba(255, 0, 0, 0.3)',
             zIndex: 999, // Убедимся, что поверх всего
@@ -700,21 +590,21 @@ const removePlayer = (playerToRemove) => {
             borderRadius: '20px',
             textAlign: 'center',
             maxWidth: '80%',
-            border: `4px solid ${playerWon ? '#00ffff' : '#ff0000'}`,
-            boxShadow: `0 0 30px ${playerWon ? '#00ffff' : '#ff0000'}`
+             border: `4px solid ${!removedPlayers.includes(playerName) ? '#00ffff' : '#ff0000'}`,
+            boxShadow: `0 0 30px ${!removedPlayers.includes(playerName) ? '#00ffff' : '#ff0000'}`
           }}>
             <h1 style={{
               fontSize: '48px',
-              color: playerWon ? '#00ffff' : '#ff0000',
+              color: !removedPlayers.includes(playerName) ? '#00ffff' : '#ff0000',
               marginBottom: '20px'
             }}>
-              {playerWon ? 'Вы выиграли!' : 'Вас выгнали!'}
+              {!removedPlayers.includes(playerName) ? 'Вы выиграли!' : 'Вас выгнали!'}
             </h1>
             <p style={{
               fontSize: '32px',
               color: 'white'
             }}>
-              {playerWon 
+              {!removedPlayers.includes(playerName) 
                 ? 'Вы будете спасать человечество!!!' 
                 : 'Кажется, ваша жизнь закончится в ближайшее время вне бункера...'
               }
