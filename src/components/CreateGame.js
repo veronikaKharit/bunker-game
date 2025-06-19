@@ -30,11 +30,9 @@ function CreateGame() {
   };
 
   const generateGameCode = () => {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-      code += letters.charAt(Math.floor(Math.random() * letters.length));
-    }
+    
+    let code = 'S59UOWPY';
+   
     return code;
   };
 
